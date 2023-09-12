@@ -119,6 +119,7 @@ module cla(in1,in2,carry_out,enable,clock,sum_output);//Carry Look Adder
         end
         else 
             sum_output=8'bz;
+            carry_out=1'bz;
     end
 endmodule 
 
