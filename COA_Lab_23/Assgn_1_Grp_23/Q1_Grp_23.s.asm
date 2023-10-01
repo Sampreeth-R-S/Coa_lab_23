@@ -3,7 +3,7 @@
 #Group Number 23
 #Semester 5
 #Team Members: Yash Kumar(21CS30059)
-#               Sampreeth R S(21CS30038)
+#              Sampreeth R S(21CS30038)
 
 
 #Constant data
