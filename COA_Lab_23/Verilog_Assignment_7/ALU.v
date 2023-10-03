@@ -165,8 +165,8 @@ module subtractor(in1,in2,enable,diff_output);//Subtractor module
     wire [31:0] temp;
     wire carry_out;
     wire carry_in;
-    assign carry_in=1'b0;
-    complementor C1 (temp,in2);//Temp stores 2's complement
+    assign carry_in=1'b1;
+    assign temp=~in2;
     large_adder A1 (in1,temp,diff_output,carry_in,enable);//Adder to add in1 and 2's complement of in2
 endmodule    
 
