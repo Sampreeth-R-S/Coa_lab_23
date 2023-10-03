@@ -14,13 +14,17 @@ module testbench;
         #0 sel=0;in1=8;in2=24;//Testcases
         #20 $monitor("select=%d,in1=%d,in2=%d,out=%d",sel,in1,in2,out);
         #20 sel=1;in1=8;in2=7;
+      #20 sel=1;in1=8;in2=-7;
         //#100 $monitor("select=%d,in1=%d,in2=%d,out=%d",sel,in1,in2,out);
+      
         #20 sel=2;in1=8;in2=7;
+      #20 sel=2;in1=8;in2=6;
         //#20 $monitor("select=%d,in1=%d,in2=%d,out=%d",sel,in1,in2,out);
         #20 sel=3;in1=8;in2=10;
         #20 sel=3;in1=8;in2=7;
         //#20 $monitor("select=%d,in1=%d,in2=%d,out=%d",sel,in1,in2,out);
         #20 sel=4;in1=7;in2=10;
+        #20 sel=4;in1=7;in2=9;
         //#20 $monitor("select=%d,in1=%d,in2=%d,out=%d",sel,in1,in2,out);
         #20 sel=5;in1=7;in2=15;
         //#20 $monitor("select=%d,in1=%d,in2=%d,out=%d",sel,in1,in2,out);
