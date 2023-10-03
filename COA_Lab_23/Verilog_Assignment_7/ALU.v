@@ -33,7 +33,7 @@ module testbench;
         #20 sel=7;in1=8;in2=7;
         //#20 $monitor("select=%d,in1=%d,in2=%d,out=%d",sel,in1,in2,out);
         #20 sel=8;in1=8;in2=6;
-        $finish;
+        #20 $finish;
        end
 endmodule
 
