@@ -135,7 +135,7 @@ module large_adder(input [31:0] in1,input [31:0] in2,output wire [31:0] out,inpu
     cla C4(in1[31:24],in2[31:24],carry[3],carry[4],enable,out[31:24]);
 endmodule
 
-module  complementor (out, X);//Complementor for subtract
+module  complementor (out, X);//Complementor
     input [31:0] X;
     output [31:0] out;      
     wire [31:0] out;
@@ -161,8 +161,8 @@ module subtractor(in1,in2,enable,diff_output);//Subtractor module
     wire [31:0] temp;
     wire carry_out;
     wire carry_in;
-    assign carry_in=1'b0;
-    complementor C1 (temp,in2);//Temp stores 2's complement
+    assign carry_in=1'b1;
+    assign temp=~in2;
     large_adder A1 (in1,temp,diff_output,carry_in,enable);//Adder to add in1 and 2's complement of in2
 endmodule    
 
