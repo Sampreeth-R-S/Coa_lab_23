@@ -1,42 +1,3 @@
-module testbench;
-     reg clk;
-     initial
-    begin
-        clk=0;  //Initialise the clock
-        forever #5 clk=~clk;  //Toggle the clock every 5ns
-    end
-    reg [31:0] in1,in2;
-    reg [3:0] sel;
-    wire [31:0] out;
-    top_module M1(in1,in2,sel,out);
-    initial 
-    begin
-        #0 sel=0;in1=8;in2=24;//Testcases
-        #20 $monitor("select=%d,in1=%d,in2=%d,out=%d",sel,in1,in2,out);
-        #20 sel=1;in1=8;in2=7;
-      #20 sel=1;in1=8;in2=-7;
-        //#100 $monitor("select=%d,in1=%d,in2=%d,out=%d",sel,in1,in2,out);
-      
-        #20 sel=2;in1=8;in2=7;
-      #20 sel=2;in1=8;in2=6;
-        //#20 $monitor("select=%d,in1=%d,in2=%d,out=%d",sel,in1,in2,out);
-        #20 sel=3;in1=8;in2=10;
-        #20 sel=3;in1=8;in2=7;
-        //#20 $monitor("select=%d,in1=%d,in2=%d,out=%d",sel,in1,in2,out);
-        #20 sel=4;in1=7;in2=10;
-        #20 sel=4;in1=7;in2=9;
-        //#20 $monitor("select=%d,in1=%d,in2=%d,out=%d",sel,in1,in2,out);
-        #20 sel=5;in1=7;in2=15;
-        //#20 $monitor("select=%d,in1=%d,in2=%d,out=%d",sel,in1,in2,out);
-        #20 sel=6;in1=7;in2=6;
-        //#20 $monitor("select=%d,in1=%d,in2=%d,out=%d",sel,in1,in2,out);
-        #20 sel=7;in1=8;in2=7;
-        //#20 $monitor("select=%d,in1=%d,in2=%d,out=%d",sel,in1,in2,out);
-        #20 sel=8;in1=8;in2=6;
-        #20 $finish;
-       end
-endmodule
-
 module left_shift(in1,in2,enable,out);  //Left shift operator
     input [31:0]in1,in2;
     input enable;
@@ -198,7 +159,7 @@ module my_decoder(inp,outp);//Decoder module
     end
 endmodule
 
-module top_module(in1,in2,sel,out);//Top module
+module ALU(in1,in2,sel,out);//Top module
     input [31:0]in1,in2;
     output [31:0] out;
     input [3:0] sel;
@@ -218,4 +179,145 @@ module top_module(in1,in2,sel,out);//Top module
     not_op M7(in1,in2,enable[6],out);
     or_op M8(in1,in2,enable[7],out);
     xor_op M9(in1,in2,enable[8],out);
+endmodule
+
+module reg_bank(read_addr1, read_addr2, write_addr, write_data, write_enable, read_data1, read_data2, clk);
+    input [3:0] read_addr1, read_addr2, write_addr;
+    input [31:0] write_data;
+    input write_enable;
+    output [31:0] read_data1, read_data2;
+    wire [31:0] read_data1, read_data2;
+    reg [31:0] reg_bank [0:15];
+    reg [31:0] regA, regB;
+    input clk;
+    always @(posedge clk)
+    begin
+        if(write_enable)
+            reg_bank[write_addr] <= write_data;
+    end
+    assign read_data1 = reg_bank[read_addr1];
+    assign read_data2 = reg_bank[read_addr2];
+endmodule
+
+module pos_edge_det (input sig, // Input signal for which positive edge has to be detected
+                     input clk, // Input signal for clock
+                     output pe); // Output signal that gives a pulse when a positive edge occurs
+
+   reg sig_dly; // Internal signal to store the delayed version of signal
+
+   // This always block ensures that sig_dly is exactly 1 clock behind sig
+   always @ (posedge clk) begin
+      sig_dly <= sig;
+   end
+   // Combinational logic where sig is AND with delayed, inverted version of sig
+   // Assign statement assigns the evaluated expression in the RHS to the internal net pe
+   assign pe = sig & ~sig_dly;
+endmodule
+
+module top_module(input [15:0] in, input button1, input button2, input button3, input button4, input button5, output reg[15:0] out, input clk);
+    reg [31:0] aluin1, aluin2;
+    wire [31:0] aluout;
+    reg [31:0] regA,regB;
+    reg [3:0] read_addr1, read_addr2, write_addr;
+    reg write_enable = 0;
+    reg [31:0] regbankin;
+    wire [31:0] regout1,regout2;
+    reg_bank R1(read_addr1,read_addr2,write_addr, regbankin, write_enable, regout1, regout2, clk);
+    reg [3:0] sel;
+    ALU M1(aluin1, aluin2, sel, aluout);
+    wire p1,p2,p3;
+    reg [2:0] counter = 0;
+    pos_edge_det m1(button1,clk,p1);
+    pos_edge_det m2(button2, clk, p2);
+    pos_edge_det m3(button3, clk, p3);
+    wire [31:0] outp;
+    reg [3:0] addrtemp;
+    reg [31:0] regtemp;
+    reg [2:0] counter2=0;
+    reg [2:0] counter3=0;
+    always @(posedge clk)
+    begin
+        if(p1)
+        begin
+            read_addr1 = in[3:0];
+            read_addr2 = in[7:4];
+            write_addr = in[11:8];
+            sel = in[15:12];
+            counter3=1;
+            out = in;
+        end
+        else if(counter3==1)
+        begin
+            aluin1=regout1;
+            aluin2=regout2;
+            counter3=2;
+        end
+        else if(counter3==2)
+        begin
+            regbankin = aluout;
+            write_enable=1;
+            out = regbankin[15:0];
+            counter3=3;
+        end
+        else if(counter3==3)
+        begin
+            write_enable=0;
+            counter3=0;
+        end
+        if(p2)
+        begin
+            write_enable = 0;
+            if(counter==0)
+            begin
+                addrtemp = in[3:0];
+                counter = counter+1;
+                out = {12'b0,addrtemp};
+            end
+            else if(counter == 1)
+            begin
+                regtemp[15:0]=in;
+                out = regtemp[15:0];
+                counter = counter + 1;
+            end
+            else if(counter == 2)
+            begin
+                regtemp[31:16]=in;
+                counter=counter+1;
+                out = regtemp[31:16];
+                write_addr=addrtemp;
+                regbankin=regtemp;
+                write_enable=1;
+            end
+            else if(counter == 3)
+            begin
+                counter=0;
+                write_enable=0;
+                out = 0;
+            end
+        end
+        if(p3)
+        begin
+            write_enable=0;
+            read_addr1=in[3:0];
+            
+            if(counter2==0)
+            begin
+                counter2=1;
+                write_enable=0;
+                read_addr1=in[3:0];
+            end
+            else if(counter2==1)
+            begin
+                $display("readaddr=%d,readval=%d,in=%d\n",read_addr1,regout1,in);
+                counter2=2;
+                out=regout1[15:0];
+            end
+            else if(counter2==2)
+            begin
+                counter2=0;
+                out=regout1[31:16];
+            end
+        end
+    end
+                
 endmodule

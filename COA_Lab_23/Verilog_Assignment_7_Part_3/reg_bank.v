@@ -1,41 +1,4 @@
-module testbench;
-     reg clk;
-     initial
-    begin
-        clk=0;  //Initialise the clock
-        forever #5 clk=~clk;  //Toggle the clock every 5ns
-    end
-    reg [31:0] in1,in2;
-    reg [3:0] sel;
-    wire [31:0] out;
-    top_module M1(in1,in2,sel,out);
-    initial 
-    begin
-        #0 sel=0;in1=8;in2=24;//Testcases
-        #20 $monitor("select=%d,in1=%d,in2=%d,out=%d",sel,in1,in2,out);
-        #20 sel=1;in1=8;in2=7;
-      #20 sel=1;in1=8;in2=-7;
-        //#100 $monitor("select=%d,in1=%d,in2=%d,out=%d",sel,in1,in2,out);
-      
-        #20 sel=2;in1=8;in2=7;
-      #20 sel=2;in1=8;in2=6;
-        //#20 $monitor("select=%d,in1=%d,in2=%d,out=%d",sel,in1,in2,out);
-        #20 sel=3;in1=8;in2=10;
-        #20 sel=3;in1=8;in2=7;
-        //#20 $monitor("select=%d,in1=%d,in2=%d,out=%d",sel,in1,in2,out);
-        #20 sel=4;in1=7;in2=10;
-        #20 sel=4;in1=7;in2=9;
-        //#20 $monitor("select=%d,in1=%d,in2=%d,out=%d",sel,in1,in2,out);
-        #20 sel=5;in1=7;in2=15;
-        //#20 $monitor("select=%d,in1=%d,in2=%d,out=%d",sel,in1,in2,out);
-        #20 sel=6;in1=7;in2=6;
-        //#20 $monitor("select=%d,in1=%d,in2=%d,out=%d",sel,in1,in2,out);
-        #20 sel=7;in1=8;in2=7;
-        //#20 $monitor("select=%d,in1=%d,in2=%d,out=%d",sel,in1,in2,out);
-        #20 sel=8;in1=8;in2=6;
-        #20 $finish;
-       end
-endmodule
+
 
 module left_shift(in1,in2,enable,out);  //Left shift operator
     input [31:0]in1,in2;
@@ -198,7 +161,7 @@ module my_decoder(inp,outp);//Decoder module
     end
 endmodule
 
-module top_module(in1,in2,sel,out);//Top module
+module ALU(in1,in2,sel,out);//Top module
     input [31:0]in1,in2;
     output [31:0] out;
     input [3:0] sel;
@@ -218,4 +181,37 @@ module top_module(in1,in2,sel,out);//Top module
     not_op M7(in1,in2,enable[6],out);
     or_op M8(in1,in2,enable[7],out);
     xor_op M9(in1,in2,enable[8],out);
+endmodule
+
+module reg_bank(read_addr1, read_addr2, write_addr, write_data, write_enable, read_data1, read_data2, clk);
+    input [3:0] read_addr1, read_addr2, write_addr;
+    input [31:0] write_data;
+    input write_enable;
+    output [31:0] read_data1, read_data2;
+    wire [31:0] read_data1, read_data2;
+    reg [31:0] reg_bank [0:15];
+    reg [31:0] regA, regB;
+    input clk;
+    always @(posedge clk)
+    begin
+        if(write_enable)
+            reg_bank[write_addr] <= write_data;
+        regA <= reg_bank[read_addr1];
+        regB <= reg_bank[read_addr2];
+    end
+    assign read_data1 = regA;
+    assign read_data2 = regB;
+endmodule
+
+module top_module(input [15:0] in, input button1, input button2, input button3, input button4, input button5, output reg[15:0] out, input clk);
+    wire [31:0] aluin1, aluin2, aluout;
+    reg [3:0] read_addr1, read_addr2, write_addr;
+    reg write_enable = 0;
+    reg_bank R1(read_addr1,read_addr2,write_addr, aluout, write_enable, aluin1, aluin2, clk);
+    reg [3:0] sel;
+    ALU M1(aluin1, aluin2, sel, aluout);
+    
+
+
+
 endmodule

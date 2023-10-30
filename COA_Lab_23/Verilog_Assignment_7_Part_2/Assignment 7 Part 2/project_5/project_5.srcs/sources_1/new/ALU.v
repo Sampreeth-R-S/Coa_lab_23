@@ -1,41 +1,4 @@
-module testbench;
-     reg clk;
-     initial
-    begin
-        clk=0;  //Initialise the clock
-        forever #5 clk=~clk;  //Toggle the clock every 5ns
-    end
-    reg [31:0] in1,in2;
-    reg [3:0] sel;
-    wire [31:0] out;
-    top_module M1(in1,in2,sel,out);
-    initial 
-    begin
-        #0 sel=0;in1=8;in2=24;//Testcases
-        #20 $monitor("select=%d,in1=%d,in2=%d,out=%d",sel,in1,in2,out);
-        #20 sel=1;in1=8;in2=7;
-      #20 sel=1;in1=8;in2=-7;
-        //#100 $monitor("select=%d,in1=%d,in2=%d,out=%d",sel,in1,in2,out);
-      
-        #20 sel=2;in1=8;in2=7;
-      #20 sel=2;in1=8;in2=6;
-        //#20 $monitor("select=%d,in1=%d,in2=%d,out=%d",sel,in1,in2,out);
-        #20 sel=3;in1=8;in2=10;
-        #20 sel=3;in1=8;in2=7;
-        //#20 $monitor("select=%d,in1=%d,in2=%d,out=%d",sel,in1,in2,out);
-        #20 sel=4;in1=7;in2=10;
-        #20 sel=4;in1=7;in2=9;
-        //#20 $monitor("select=%d,in1=%d,in2=%d,out=%d",sel,in1,in2,out);
-        #20 sel=5;in1=7;in2=15;
-        //#20 $monitor("select=%d,in1=%d,in2=%d,out=%d",sel,in1,in2,out);
-        #20 sel=6;in1=7;in2=6;
-        //#20 $monitor("select=%d,in1=%d,in2=%d,out=%d",sel,in1,in2,out);
-        #20 sel=7;in1=8;in2=7;
-        //#20 $monitor("select=%d,in1=%d,in2=%d,out=%d",sel,in1,in2,out);
-        #20 sel=8;in1=8;in2=6;
-        #20 $finish;
-       end
-endmodule
+
 
 module left_shift(in1,in2,enable,out);  //Left shift operator
     input [31:0]in1,in2;
@@ -197,16 +160,73 @@ module my_decoder(inp,outp);//Decoder module
     endcase
     end
 endmodule
+module pos_edge_det (input sig, // Input signal for which positive edge has to be detected
+                     input clk, // Input signal for clock
+                     output pe); // Output signal that gives a pulse when a positive edge occurs
 
-module top_module(in1,in2,sel,out);//Top module
-    input [31:0]in1,in2;
-    output [31:0] out;
-    input [3:0] sel;
+   reg sig_dly; // Internal signal to store the delayed version of signal
+
+   // This always block ensures that sig_dly is exactly 1 clock behind sig
+   always @ (posedge clk) begin
+      sig_dly <= sig;
+   end
+   // Combinational logic where sig is AND with delayed, inverted version of sig
+   // Assign statement assigns the evaluated expression in the RHS to the internal net pe
+   assign pe = sig & ~sig_dly;
+endmodule
+module top_module(in,button1,button2,button3,outp,clk);//Top module
+    input [15:0]in;
+    input clk;
+    output [15:0] outp;
+    reg [31:0]in1,in2;
+    wire [31:0] out;
+    wire [15:0] outp;
+    input button1;
+    input button2,button3;
+    reg [3:0] sel;
     //input clock;
     wire [8:0] enable;
     wire carry_out;
     wire carry_in;
+    reg [3:0]counter=0;
+    wire p1,p2;
+    pos_edge_det det1(button1,clk,p1);
+    pos_edge_det(button2,clk,p2);
+    always @(posedge clk)
+    begin
+    if(p1==1)
+    begin
+        if(counter==0)
+        begin
+            in1[15:0]=in;
+            counter=1;
+        end
+        else if(counter==1)
+        begin
+            in1[31:16]=in;
+            counter=2;
+        end
+        else if(counter==2)
+        begin
+            in2[15:0]=in;
+            counter=3;
+        end
+        else if(counter==3)
+        begin
+            in2[31:16]=in;
+            counter=0;
+        end
+    end
+    end
+    always @(posedge clk)
+    begin
+        if(p2==1)
+        begin
+            sel=in[3:0];
+        end
+    end
     assign carry_in=1'b0;
+    assign outp=(button3)?out[31:16]:out[15:0];
     my_decoder M(sel,enable);//Decoder to the select input
     large_adder M1(in1,in2,out,carry_in,enable[0]);//Component modules with appropriate select lines
     subtractor M2(in1,in2,enable[1],out);
