@@ -333,7 +333,6 @@ module control_unit(clk, button1);
     wire[31:0] douta;
     reg [31:0] counter=0;
     reg[31:0] instruction; 
-    reg [31:0] pc=0;
     reg halt=0;
     reg [31:0] write_data;
     wire[31:0] read_data1, read_data2;
@@ -347,10 +346,10 @@ module control_unit(clk, button1);
     wire p1;
     reg [3:0] sel;
     reg write_enable=0;
+    reg [31:0] pc=0;
     reg [1:0] alusrc_1, alusrc_2, memsrc, reg_write_src, mem_addr_src;
     reg reg_addr_src,stack_addr, update_sp;
     datapath M10 (clk,ena,douta,read_addr1, read_addr2, write_enable, read_data1, read_data2, sel, out, pc, stackpointer, alusrc_1,alusrc_2,memsrc,instruction, reg_addr_src, reg_write_src,mem_addr_src, stack_addr, update_sp);
-    
     pos_edge_det P1(button1,clk,p1);
     
     
