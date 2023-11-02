@@ -1,3 +1,40 @@
+/*module testbench;
+reg clk=0;
+reg button1=0;
+always #5 clk=~clk;
+ control_unit M1 (clk,button1);
+ initial
+ begin
+    #10000 $finish;
+ end
+endmodule
+module blk_mem_gen_0 (
+    input wire clka,    // input wire clka
+    input wire ena,      // input wire ena
+    input wire wea,      // input wire [0 : 0] wea
+    input wire[9:0] addra,  // input wire [9 : 0] addra
+    input wire[31:0] dina,    // input wire [31 : 0] dina
+    output wire [31:0] douta  // output wire [31 : 0] douta
+    );
+    reg [31:0] reg_bank [0:3];
+    reg [31:0] regA, regB;
+    //input clka;
+    initial
+    begin
+        reg_bank[0] = 32'b01001100000000000000000000000010;
+        reg_bank[1] = 32'b00000100000000010000000000000001;
+        reg_bank[2] = 32'b11111000000000000000000000000000;
+        reg_bank[3] = 32'b11111000000000000000000000000000;
+    end
+    always @(posedge clka)
+    begin
+        if(wea)
+            reg_bank[addra] <= dina;
+    end
+    assign douta = reg_bank[addra];
+
+endmodule*/
+
 module left_shift(in1,in2,enable,out);  //Left shift operator
     input [31:0]in1,in2;
     input enable;
@@ -193,10 +230,18 @@ module reg_bank(read_addr1, read_addr2, write_addr, write_data, write_enable, re
     always @(posedge clk)
     begin
         if(write_enable)
-            reg_bank[write_addr] <= write_data;
+            begin
+                //$display("%d=write_data",write_data);
+                //$display("%d=write_addr",write_addr);
+                reg_bank[write_addr] <= write_data;
+            end
+        //$display("%d=reg_bank[1]",reg_bank[1]);
+        //$display("%d=reg_bank[0]",reg_bank[0]);
     end
     assign read_data1 = reg_bank[read_addr1];
     assign read_data2 = reg_bank[read_addr2];
+    
+   
 endmodule
 
 module pos_edge_det (input sig, // Input signal for which positive edge has to be detected
@@ -214,23 +259,23 @@ module pos_edge_det (input sig, // Input signal for which positive edge has to b
    assign pe = sig & ~sig_dly;
 endmodule
 
-module 2_to_1_mux(
-    input reg [31:0] in1,in2,
-    input reg sel,
-    output wire[31:0] out
-);
+module two_to_one_mux(in1, in2, sel, out);
+    input [31:0] in1;
+    input[31:0] in2;
+    input sel;
+    output wire[31:0] out;
     assign out = sel?in2:in1;
 endmodule
-module 2_to_1_mux_small(
-    input reg [3:0] in1,in2,
-    input reg sel,
-    output wire[3:0] out
-);
+module two_to_one_mux_small(in1, in2, sel, out);
+    input [3:0] in1;
+    input [3:0] in2;
+    input sel;
+    output wire[3:0] out;
     assign out = sel?in2:in1;
 endmodule
-module 3_to_1_mux(
-    input reg [31:0] in1, in2, in3,
-    input reg [1:0] sel,
+module three_to_one_mux(
+    input [31:0] in1, in2, in3,
+    input [1:0] sel,
     output reg [31:0] out
 );
     always @(in1 or in2 or in3 or sel)
@@ -239,13 +284,14 @@ module 3_to_1_mux(
         0: out=in1;
         1: out=in2;
         2: out=in3;
-        4: out=0;
+        3: out=0;
+        endcase
     end
 endmodule
 
-module 3_to_1_mux_small(
-    input reg [9:0] in1, in2, in3,
-    input reg [1:0] sel,
+module three_to_one_mux_small(
+    input [9:0] in1, in2, in3,
+    input [1:0] sel,
     output reg [9:0] out
 );
     always @(in1 or in2 or in3 or sel)
@@ -254,13 +300,14 @@ module 3_to_1_mux_small(
         0: out=in1;
         1: out=in2;
         2: out=in3;
-        4: out=0;
+        3: out=0;
+        endcase
     end
 endmodule
 
-module 4_to_1_mux(
-    input reg [31:0] in1, in2, in3,in4,
-    input reg [1:0] sel,
+module four_to_one_mux(
+    input [31:0] in1, in2, in3,in4,
+    input [1:0] sel,
     output reg [31:0] out
 );
     always @(in1 or in2 or in3 or sel or in4)
@@ -269,7 +316,24 @@ module 4_to_1_mux(
         0: out=in1;
         1: out=in2;
         2: out=in3;
-        4: out=in4;
+        3: out=in4;
+        endcase
+    end
+endmodule
+
+module four_to_one_mux_small(
+    input [9:0] in1, in2, in3,in4,
+    input [1:0] sel,
+    output reg [9:0] out
+);
+    always @(in1 or in2 or in3 or sel or in4)
+    begin
+        case(sel)
+        0: out=in1;
+        1: out=in2;
+        2: out=in3;
+        3: out=in4;
+        endcase
     end
 endmodule
 
@@ -279,14 +343,14 @@ module datapath(
     input wire wea,
     //input wire [9:0] addra,
     //input wire [31:0] dina,
-    input wire [31:0] douta,
+    output wire [31:0] douta,
     input wire [3:0] read_addr1,read_addr2, //write_addr,
     //input wire [31:0] write_data,
     input wire write_enable,
     output wire [31:0] read_data1, read_data2,
     //input wire[31:0] in1, in2,
     input wire [3:0] sel,
-    output wire [31:0] out
+  output wire [31:0] out,
     input wire [31:0] pc,
     output wire [31:0] stackpointer,
     input wire [1:0] alusrc_1,alusrc_2,memsrc,
@@ -296,6 +360,7 @@ module datapath(
     input wire [1:0] mem_addr_src,
     input wire stack_addr,
     input wire update_sp,
+    input [31:0] immediate
 
 );
     wire [31:0] dina;
@@ -304,7 +369,7 @@ module datapath(
     wire [3:0] write_addr;
     reg [31:0] temp=1;
     wire [9:0] addra;
-    wire [31:0] stackpointer;
+    //wire [31:0] stackpointer;
     blk_mem_gen_0 RAM (
     .clka(clk),    // input wire clka
     .ena(ena),      // input wire ena
@@ -315,18 +380,21 @@ module datapath(
     );
     reg_bank M1(read_addr1, read_addr2, write_addr, write_data, write_enable, read_data1, read_data2, clk);
     wire [31:0] stack_temp;
-    3_to_1_mux mux1(read_data1, stackpointer, pc, alusrc_1, in1);
-    3_to_1_mux mux2(read_data2, immediate, temp, alusrc_2, in2);
-    4_to_1_mux mux3(read_data1,read_data2,pc,stackpointer,memsrc,dina);
-    2_to_1_mux_small mux4(instruction[14:11],instruction[19:16],reg_addr_src,write_addr);
-    4_to_1_mux mux5(out,read_data1,douta,immediate, reg_write_src, write_data);
-    4_to_1_mux_small mux6(out[9:0],stackpointer[9:0],pc[9:0],mem_addr_src,addra);
-    2_to_1_mux mux7 (out,douta,stack_addr,stack_temp);
+    three_to_one_mux mux1(read_data1, stackpointer, pc, alusrc_1, in1);
+    three_to_one_mux mux2(read_data2, immediate, temp, alusrc_2, in2);
+    four_to_one_mux mux3(read_data1,read_data2,pc,stackpointer,memsrc,dina);
+    two_to_one_mux_small mux4(instruction[14:11],instruction[19:16],reg_addr_src,write_addr);
+    four_to_one_mux mux5(out,read_data1,douta,immediate, reg_write_src, write_data);
+    three_to_one_mux_small mux6(out[9:0],stackpointer[9:0],pc[9:0],mem_addr_src,addra);
+    two_to_one_mux mux7 (out,douta,stack_addr,stack_temp);
     ALU M2 (in1,in2,sel,out);
     assign stackpointer = update_sp?stack_temp:stackpointer;
+    //always @(posedge clk)
+        //$display("%d=immediate",immediate);
 endmodule
 module control_unit(clk, button1);
     input clk;
+    input button1;
     reg ena=0,wea=0;
     reg [9:0] addra;
     reg [31:0] dina;
@@ -349,12 +417,13 @@ module control_unit(clk, button1);
     reg [31:0] pc=0;
     reg [1:0] alusrc_1, alusrc_2, memsrc, reg_write_src, mem_addr_src;
     reg reg_addr_src,stack_addr, update_sp;
-    datapath M10 (clk,ena,douta,read_addr1, read_addr2, write_enable, read_data1, read_data2, sel, out, pc, stackpointer, alusrc_1,alusrc_2,memsrc,instruction, reg_addr_src, reg_write_src,mem_addr_src, stack_addr, update_sp);
+    datapath M10 (clk,ena,wea,douta,read_addr1, read_addr2, write_enable, read_data1, read_data2, sel, out, pc, stackpointer, alusrc_1,alusrc_2,memsrc,instruction, reg_addr_src, reg_write_src,mem_addr_src, stack_addr, update_sp,immediate);
     pos_edge_det P1(button1,clk,p1);
     
     
     always @(posedge clk)
     begin
+        ////$display("%d=pc",pc);
         if(halt==1)
         begin   
             if(p1)
@@ -378,6 +447,7 @@ module control_unit(clk, button1);
         else if(counter==2)
         begin
             counter=3;
+            //$display("%d=instruction",douta[31:26]);
             //pc=pc+1;
             instruction=douta;
             read_addr1=instruction[24:21];
@@ -629,7 +699,7 @@ module control_unit(clk, button1);
                 //write_addr=instruction[19:16];
                 reg_addr_src=1;
                 write_enable=1;
-                //$display("%d=enable,%d=data,%d=address",write_enable,immediate[1],write_addr);
+                ////$display("%d=enable,%d=data,%d=address",write_enable,immediate[1],write_addr);
             end
             counter=8;
         end
