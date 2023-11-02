@@ -243,6 +243,21 @@ module 3_to_1_mux(
     end
 endmodule
 
+module 3_to_1_mux_small(
+    input reg [9:0] in1, in2, in3,
+    input reg [1:0] sel,
+    output reg [9:0] out
+);
+    always @(in1 or in2 or in3 or sel)
+    begin
+        case(sel)
+        0: out=in1;
+        1: out=in2;
+        2: out=in3;
+        4: out=0;
+    end
+endmodule
+
 module 4_to_1_mux(
     input reg [31:0] in1, in2, in3,in4,
     input reg [1:0] sel,
@@ -262,7 +277,7 @@ module datapath(
     input wire clk,
     input wire ena,
     input wire wea,
-    input wire [9:0] addra,
+    //input wire [9:0] addra,
     //input wire [31:0] dina,
     input wire [31:0] douta,
     input wire [3:0] read_addr1,read_addr2, //write_addr,
@@ -273,11 +288,14 @@ module datapath(
     input wire [3:0] sel,
     output wire [31:0] out
     input wire [31:0] pc,
-    input wire [31:0] stackpointer,
+    output wire [31:0] stackpointer,
     input wire [1:0] alusrc_1,alusrc_2,memsrc,
     input wire [31:0] instruction,
     input wire reg_addr_src,
-    input wire [1:0] reg_write_src
+    input wire [1:0] reg_write_src,
+    input wire [1:0] mem_addr_src,
+    input wire stack_addr,
+    input wire update_sp,
 
 );
     wire [31:0] dina;
@@ -285,6 +303,8 @@ module datapath(
     wire [31:0] write_data;
     wire [3:0] write_addr;
     reg [31:0] temp=1;
+    wire [9:0] addra;
+    wire [31:0] stackpointer;
     blk_mem_gen_0 RAM (
     .clka(clk),    // input wire clka
     .ena(ena),      // input wire ena
@@ -294,14 +314,16 @@ module datapath(
     .douta(douta)  // output wire [31 : 0] douta
     );
     reg_bank M1(read_addr1, read_addr2, write_addr, write_data, write_enable, read_data1, read_data2, clk);
-    
+    wire [31:0] stack_temp;
     3_to_1_mux mux1(read_data1, stackpointer, pc, alusrc_1, in1);
     3_to_1_mux mux2(read_data2, immediate, temp, alusrc_2, in2);
     4_to_1_mux mux3(read_data1,read_data2,pc,stackpointer,memsrc,dina);
     2_to_1_mux_small mux4(instruction[14:11],instruction[19:16],reg_addr_src,write_addr);
-    4_to_1_mux mux5(out,read_data1,douta,immediate, reg_write_src, write_data)
+    4_to_1_mux mux5(out,read_data1,douta,immediate, reg_write_src, write_data);
+    4_to_1_mux_small mux6(out[9:0],stackpointer[9:0],pc[9:0],mem_addr_src,addra);
+    2_to_1_mux mux7 (out,douta,stack_addr,stack_temp);
     ALU M2 (in1,in2,sel,out);
-
+    assign stackpointer = update_sp?stack_temp:stackpointer;
 endmodule
 module control_unit(clk, button1);
     input clk;
@@ -317,21 +339,21 @@ module control_unit(clk, button1);
     wire[31:0] read_data1, read_data2;
     reg[3:0] read_addr1, read_addr2, write_addr;
     reg [31:0] in1,in2;
+    reg [5:0] opcode;
+    reg[5:0] func;
+    reg [31:0] immediate=0;
+    wire [31:0] stackpointer;
     wire[31:0] out;
     wire p1;
     reg [3:0] sel;
     reg write_enable=0;
-    reg [1:0] alusrc_1, alusrc_2, memsrc, reg_write_src;
-    reg reg_addr_src;
-    datapath M10 (clk,ena,addra,douta,read_addr1, read_addr2, write_enable, read_data1, read_data2, sel, out, pc, stackpointer, alusrc_1,alusrc_2,memsrc,instruction, reg_addr_src, reg_write_src);
+    reg [1:0] alusrc_1, alusrc_2, memsrc, reg_write_src, mem_addr_src;
+    reg reg_addr_src,stack_addr, update_sp;
+    datapath M10 (clk,ena,douta,read_addr1, read_addr2, write_enable, read_data1, read_data2, sel, out, pc, stackpointer, alusrc_1,alusrc_2,memsrc,instruction, reg_addr_src, reg_write_src,mem_addr_src, stack_addr, update_sp);
     
     pos_edge_det P1(button1,clk,p1);
     
     
-    reg [5:0] opcode;
-    reg[5:0] func;
-    reg [31:0] immediate=0;
-    reg [31:0] stackpointer=1023;
     always @(posedge clk)
     begin
         if(halt==1)
@@ -344,7 +366,8 @@ module control_unit(clk, button1);
         end
         else if(counter==0)
         begin
-            addra=pc[9:0];
+            //addra=pc[9:0];
+            mem_addr_src=2;
             ena=1;
             wea=0;
             counter=1;
@@ -465,13 +488,19 @@ module control_unit(clk, button1);
                     //dina=read_data1;
                     memsrc=0;
                     wea=1;
-                    addra=out;
-                    stackpointer=out;
+                    //addra=out;
+                    mem_addr_src=0;
+                    //stackpointer=out;
+                    stack_addr = 0;
+                    update_sp = 1;
                 end
                 else if(func==12||func==13)
                 begin
-                    addra=stackpointer;
-                    stackpointer=out;
+                    //addra=stackpointer;
+                    mem_addr_src=1;
+                    //stackpointer=out;
+                    stack_addr=0;
+                    update_sp = 1;
                 end
                 //pc=pc+1;
             end
@@ -496,11 +525,13 @@ module control_unit(clk, button1);
             end
             else if(opcode==14||opcode==16)
             begin
-                addra=out;
+                //addra=out;
+                mem_addr_src=0;
             end
             else if(opcode==15)
             begin
-                addra=out;
+                //addra=out;
+                mem_addr_src=0;
                 wea=1;
                 //dina=read_data2;
                 memsrc=1;
@@ -508,24 +539,29 @@ module control_unit(clk, button1);
             end
             else if(opcode==17)
             begin
-                addra=out;
+                //addra=out;
+                mem_addr_src=0;
                 wea=1;
                 //dina=stackpointer;
                 memsrc=3;
             end
             else if(opcode==18)
             begin
-                addra=out;
+                //addra=out;
+                mem_addr_src=0;
                 //dina=pc;
                 memsrc=2;       
                 wea=1;
-                stackpointer=out;
+                //stackpointer=out;
+                stack_addr=0;
+                update_sp=1;
             end
             counter=5;
         end
         else if(counter==5)
         begin
             counter=6;
+            update_sp=0;
         end
         else if(counter==6)
         begin
@@ -579,7 +615,9 @@ module control_unit(clk, button1);
             end
             if(opcode==16)
             begin
-                stackpointer=douta;
+                //stackpointer=douta;
+                stack_addr=1;
+                update_sp=1;
             end
             if(opcode==18)
             begin
@@ -599,6 +637,7 @@ module control_unit(clk, button1);
         else if(counter==8)
         begin
             counter=9;
+            update_sp=0;
         end
         else if(counter==9)
         begin
