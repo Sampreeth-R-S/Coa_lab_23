@@ -214,7 +214,96 @@ module pos_edge_det (input sig, // Input signal for which positive edge has to b
    assign pe = sig & ~sig_dly;
 endmodule
 
-module datapath(clk, button1);
+module 2_to_1_mux(
+    input reg [31:0] in1,in2,
+    input reg sel,
+    output wire[31:0] out
+);
+    assign out = sel?in2:in1;
+endmodule
+module 2_to_1_mux_small(
+    input reg [3:0] in1,in2,
+    input reg sel,
+    output wire[3:0] out
+);
+    assign out = sel?in2:in1;
+endmodule
+module 3_to_1_mux(
+    input reg [31:0] in1, in2, in3,
+    input reg [1:0] sel,
+    output reg [31:0] out
+);
+    always @(in1 or in2 or in3 or sel)
+    begin
+        case(sel)
+        0: out=in1;
+        1: out=in2;
+        2: out=in3;
+        4: out=0;
+    end
+endmodule
+
+module 4_to_1_mux(
+    input reg [31:0] in1, in2, in3,in4,
+    input reg [1:0] sel,
+    output reg [31:0] out
+);
+    always @(in1 or in2 or in3 or sel or in4)
+    begin
+        case(sel)
+        0: out=in1;
+        1: out=in2;
+        2: out=in3;
+        4: out=in4;
+    end
+endmodule
+
+module datapath(
+    input wire clk,
+    input wire ena,
+    input wire wea,
+    input wire [9:0] addra,
+    //input wire [31:0] dina,
+    input wire [31:0] douta,
+    input wire [3:0] read_addr1,read_addr2, //write_addr,
+    //input wire [31:0] write_data,
+    input wire write_enable,
+    output wire [31:0] read_data1, read_data2,
+    //input wire[31:0] in1, in2,
+    input wire [3:0] sel,
+    output wire [31:0] out
+    input wire [31:0] pc,
+    input wire [31:0] stackpointer,
+    input wire [1:0] alusrc_1,alusrc_2,memsrc,
+    input wire [31:0] instruction,
+    input wire reg_addr_src,
+    input wire [1:0] reg_write_src
+
+);
+    wire [31:0] dina;
+    wire [31:0] in1,in2;
+    wire [31:0] write_data;
+    wire [3:0] write_addr;
+    reg [31:0] temp=1;
+    blk_mem_gen_0 RAM (
+    .clka(clk),    // input wire clka
+    .ena(ena),      // input wire ena
+    .wea(wea),      // input wire [0 : 0] wea
+    .addra(addra),  // input wire [9 : 0] addra
+    .dina(dina),    // input wire [31 : 0] dina
+    .douta(douta)  // output wire [31 : 0] douta
+    );
+    reg_bank M1(read_addr1, read_addr2, write_addr, write_data, write_enable, read_data1, read_data2, clk);
+    
+    3_to_1_mux mux1(read_data1, stackpointer, pc, alusrc_1, in1);
+    3_to_1_mux mux2(read_data2, immediate, temp, alusrc_2, in2);
+    4_to_1_mux mux3(read_data1,read_data2,pc,stackpointer,memsrc,dina);
+    2_to_1_mux_small mux4(instruction[14:11],instruction[19:16],reg_addr_src,write_addr);
+    4_to_1_mux mux5(out,read_data1,douta,immediate, reg_write_src, write_data)
+    ALU M2 (in1,in2,sel,out);
+
+endmodule
+module control_unit(clk, button1);
     input clk;
     reg ena=0,wea=0;
     reg [9:0] addra;
@@ -224,14 +313,6 @@ module datapath(clk, button1);
     reg[31:0] instruction; 
     reg [31:0] pc=0;
     reg halt=0;
-    blk_mem_gen_0 RAM (
-    .clka(clk),    // input wire clka
-    .ena(ena),      // input wire ena
-    .wea(wea),      // input wire [0 : 0] wea
-    .addra(addra),  // input wire [9 : 0] addra
-    .dina(dina),    // input wire [31 : 0] dina
-    .douta(douta)  // output wire [31 : 0] douta
-    );
     reg [31:0] write_data;
     wire[31:0] read_data1, read_data2;
     reg[3:0] read_addr1, read_addr2, write_addr;
@@ -240,9 +321,13 @@ module datapath(clk, button1);
     wire p1;
     reg [3:0] sel;
     reg write_enable=0;
+    reg [1:0] alusrc_1, alusrc_2, memsrc, reg_write_src;
+    reg reg_addr_src;
+    datapath M10 (clk,ena,addra,douta,read_addr1, read_addr2, write_enable, read_data1, read_data2, sel, out, pc, stackpointer, alusrc_1,alusrc_2,memsrc,instruction, reg_addr_src, reg_write_src);
+    
     pos_edge_det P1(button1,clk,p1);
-    reg_bank M1(read_addr1, read_addr2, write_addr, write_data, write_enable, read_data1, read_data2, clk);
-    ALU M2 (in1,in2,sel,out);
+    
+    
     reg [5:0] opcode;
     reg[5:0] func;
     reg [31:0] immediate=0;
@@ -292,26 +377,34 @@ module datapath(clk, button1);
                 if(func<9)
                 begin
                     sel=func;
-                    in1=read_data1;
-                    in2=read_data2;
+                    //in1=read_data1;
+                    alusrc_1 = 0;
+                    //in2=read_data2;
+                    alusrc_2 = 0;
                 end
                 if(func==11)
                 begin
                     sel=1;
-                    in1=stackpointer;
-                    in2=1;
+                    //in1=stackpointer;
+                    alusrc_1 = 1;
+                    //in2=1;
+                    alusrc_2 = 2;
                 end
                 if(func==12)
                 begin
                     sel=0;
-                    in1=stackpointer;
-                    in2=1;
+                    //in1=stackpointer;
+                    alusrc_1 = 1;
+                    //in2=1;
+                    alusrc_2 = 2;
                 end
                 if(func==13)
                 begin 
                     sel=0;
-                    in1=stackpointer;
-                    in2=1;
+                    //in1=stackpointer;
+                    alusrc_1 = 1;
+                    //in2=1;
+                    alusrc_2 = 2;
                 end
             end
             
@@ -333,23 +426,31 @@ module datapath(clk, button1);
                 sel=2;
             if(opcode>=1&&opcode<=9)
                 begin
-                    in1=read_data1;
-                    in2=immediate;
+                    //in1=read_data1;
+                    alusrc_1 = 0;
+                    //in2=immediate;
+                    alusrc_2=1;
                 end
             if(opcode>9&&opcode<=13)
             begin
-                in1=pc;
-                in2=immediate;
+                //in1=pc;
+                alusrc_1=2;
+                //in2=immediate;
+                alusrc_2=1;
             end
             if(opcode>=14&&opcode<=17)
             begin
-                in1=read_data1;
-                in2=immediate;
+                //in1=read_data1;
+                alusrc_1=0;
+                //in2=immediate;
+                alusrc_2=1;
             end
             if(opcode==18)
             begin
-                in1=stackpointer;
-                in2=1;
+                //in1=stackpointer;
+                alusrc_1=1;
+                //in2=1;
+                alusrc_2=2;
                 sel=1;
             end
             counter=4;
@@ -361,7 +462,8 @@ module datapath(clk, button1);
             begin
                 if(func==11)
                 begin
-                    dina=read_data1;
+                    //dina=read_data1;
+                    memsrc=0;
                     wea=1;
                     addra=out;
                     stackpointer=out;
@@ -400,19 +502,22 @@ module datapath(clk, button1);
             begin
                 addra=out;
                 wea=1;
-                dina=read_data2;
+                //dina=read_data2;
+                memsrc=1;
                 
             end
             else if(opcode==17)
             begin
                 addra=out;
                 wea=1;
-                dina=stackpointer;
+                //dina=stackpointer;
+                memsrc=3;
             end
             else if(opcode==18)
             begin
                 addra=out;
-                dina=pc;       
+                //dina=pc;
+                memsrc=2;       
                 wea=1;
                 stackpointer=out;
             end
@@ -429,20 +534,26 @@ module datapath(clk, button1);
                 wea=0;
                 if(func<=8)
                 begin
-                    write_addr=instruction[14:11];
-                    write_data=out;
+                    //write_addr=instruction[14:11];
+                    reg_addr_src=0;
+                    //write_data=out;
+                    reg_write_src=0;
                     write_enable=1;
                 end
                 if(func==10)
                 begin
-                    write_addr=instruction[14:11];
-                    write_data=read_data1;
+                    //write_addr=instruction[14:11];
+                    reg_addr_src=0;
+                    //write_data=read_data1;
+                    reg_write_src=1;
                     write_enable=1;
                 end
                 if(func==12)
                 begin
-                    write_addr=instruction[14:11];
-                    write_data=douta;
+                    //write_addr=instruction[14:11];
+                    reg_addr_src=0;
+                    //write_data=douta;
+                    reg_write_src=2;
                     write_enable=1;
                 end
                 if(func==13)
@@ -452,14 +563,18 @@ module datapath(clk, button1);
             end
             if(opcode>=1&&opcode<=9)
             begin
-                write_addr=instruction[19:16];
-                write_data=out;
+                //write_addr=instruction[19:16];
+                reg_addr_src=1;
+                //write_data=out;
+                reg_write_src=0;
                 write_enable=1;
             end
             if(opcode==14)
             begin
-                write_addr=instruction[19:16];
-                write_data=douta;
+                //write_addr=instruction[19:16];
+                reg_addr_src=1;
+                //write_data=douta;
+                reg_write_src=2;
                 write_enable=1;
             end
             if(opcode==16)
@@ -472,8 +587,10 @@ module datapath(clk, button1);
             end
             if(opcode==19)
             begin
-                write_data=immediate;
-                write_addr=instruction[19:16];
+                //write_data=immediate;
+                reg_write_src=3;
+                //write_addr=instruction[19:16];
+                reg_addr_src=1;
                 write_enable=1;
                 //$display("%d=enable,%d=data,%d=address",write_enable,immediate[1],write_addr);
             end
