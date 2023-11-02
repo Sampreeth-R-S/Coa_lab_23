@@ -1,8 +1,0 @@
-0.7
-2020.1.1
-Aug  5 2020
-23:19:43
-D:/COA_Lab_23/assignment_7_part_4/assignment_7_part_4.sim/sim_1/behav/xsim/glbl.v,1590624368,verilog,,,,glbl,,,,,,,,
-D:/COA_Lab_23/assignment_7_part_4/assignment_7_part_4.srcs/sim_1/new/testbench.v,1698660138,verilog,,,,testbench,,,,,,,,
-D:/COA_Lab_23/assignment_7_part_4/assignment_7_part_4.srcs/sources_1/ip/blk_mem_gen_0/sim/blk_mem_gen_0.v,1698660200,verilog,,D:/COA_Lab_23/assignment_7_part_4/assignment_7_part_4.srcs/sources_1/new/datapath.v,,blk_mem_gen_0,,,,,,,,
-D:/COA_Lab_23/assignment_7_part_4/assignment_7_part_4.srcs/sources_1/new/datapath.v,1698661854,verilog,,D:/COA_Lab_23/assignment_7_part_4/assignment_7_part_4.srcs/sim_1/new/testbench.v,,ALU;and_op;cla;complementor;datapath;large_adder;left_shift;my_decoder;not_op;or_op;pos_edge_det;reg_bank;right_shift_arithmetic;right_shift_logical;subtractor;xor_op,,,,,,,,
