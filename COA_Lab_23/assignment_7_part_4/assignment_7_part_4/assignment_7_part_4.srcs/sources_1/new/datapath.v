@@ -214,7 +214,7 @@ module pos_edge_det (input sig, // Input signal for which positive edge has to b
    assign pe = sig & ~sig_dly;
 endmodule
 
-module datapath(clk);
+module datapath(clk, button1);
     input clk;
     reg ena=0,wea=0;
     reg [9:0] addra;
@@ -223,6 +223,7 @@ module datapath(clk);
     reg [31:0] counter=0;
     reg[31:0] instruction; 
     reg [31:0] pc=0;
+    reg halt=0;
     blk_mem_gen_0 RAM (
     .clka(clk),    // input wire clka
     .ena(ena),      // input wire ena
@@ -236,8 +237,10 @@ module datapath(clk);
     reg[3:0] read_addr1, read_addr2, write_addr;
     reg [31:0] in1,in2;
     wire[31:0] out;
+    wire p1;
     reg [3:0] sel;
     reg write_enable=0;
+    pos_edge_det P1(button1,clk,p1);
     reg_bank M1(read_addr1, read_addr2, write_addr, write_data, write_enable, read_data1, read_data2, clk);
     ALU M2 (in1,in2,sel,out);
     reg [5:0] opcode;
@@ -246,7 +249,15 @@ module datapath(clk);
     reg [31:0] stackpointer=1023;
     always @(posedge clk)
     begin
-        if(counter==0)
+        if(halt==1)
+        begin   
+            if(p1)
+            begin
+                halt = 0;
+                pc = pc + 1;
+            end
+        end
+        else if(counter==0)
         begin
             addra=pc[9:0];
             ena=1;
@@ -267,6 +278,10 @@ module datapath(clk);
             opcode=instruction[31:26];
             func=instruction[5:0];
             immediate[31:0] <= { {16{instruction[15]}}, instruction[15:0] };
+            if(opcode==62)
+            begin
+                halt=1;
+            end
         end
         else if(counter==3)
         begin
